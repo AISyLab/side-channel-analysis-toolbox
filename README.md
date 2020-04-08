@@ -21,14 +21,14 @@ Analysis tools included in current version:
 * Pearson correlation analysis
 
 Other features include:
-* Progressbar 
+* Progressbar
 * Logging of sub result
 
 ## Getting started
 
 <!---
 
-This section should contain installation, testing, and running instructions for people who want to get started with the project. 
+This section should contain installation, testing, and running instructions for people who want to get started with the project.
 
 - These instructions should work on a clean system.
 - These instructions should work without having to install an IDE.
@@ -146,10 +146,15 @@ This example shows how to use the pearson feature selection instead of the defau
 python sca mia --fs-pearson
 ```
 
-## Members of dev team
-Wolf Bubberman  
-Mees Frensel  
-Matthias Meester  
-Olaf Braakman  
-Sengim Karayalcin  
-Matthijs de Lange
+### References
+
+If you use this code, please consider citing:
+
+    @misc{SCAT,
+      author = {Wolfgang Bubberman, Sengim Karayalcin, Matthias Meester, Olaf Braakman, and Stjepan Picek},
+      title  = {{Side-channel Analysis Toolbox}},
+      note   = {{\url{https://github.com/AISyLab/side-channel-analysis-toolbox}}}
+      year   = {2020}
+    }
+
+<!-- comment to break blocks -->
