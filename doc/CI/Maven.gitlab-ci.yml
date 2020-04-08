@@ -1,0 +1,111 @@
+# Reference: https://docs.gitlab.com/ee/ci/yaml/
+# Examples for different languages can be found in doc/CI. Other examples can be found at: https://gitlab.com/gitlab-org/gitlb-ce/tree/master/lib/gitlb/ci/templates
+
+# Docker image
+image: maven:3.3.9-jdk-8
+
+# Variables
+# Allows you to define custom variables
+variables:
+  # This will suppress any download for dependencies and plugins or upload messages which would clutter the console log.
+  # `showDateTime` will show the passed time in milliseconds. You need to specify `--batch-mode` to make this work.
+  MAVEN_OPTS: "-Dhttps.protocols=TLSv1.2 -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN -Dorg.slf4j.simpleLogger.showDateTime=true -Djava.awt.headless=true"
+  # As of Maven 3.3.0 instead of this you may define these options in `.mvn/maven.config` so the same config is used
+  # when running from the command line.
+  # `installAtEnd` and `deployAtEnd` are only effective with recent version of the corresponding plugins.
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version -DinstallAtEnd=true -DdeployAtEnd=true"
+
+# Cache libraries in between jobs
+# https://docs.gitlab.com/ee/ci/caching/index.html
+cache:
+  paths:
+    - .m2/repository
+
+# Displays time before each script
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+  - date
+
+# Displays time after each script
+after_script:
+  - date
+
+# Stages
+stages:
+  - build
+  - test
+  - deploy
+
+# Jobs
+build:
+  stage: build
+
+  # Build steps
+  script:
+    - 'mvn $MAVEN_CLI_OPTS test-compile'
+
+  artifacts:
+    # Define which files/directories should be kept as artifacts e.g. jars
+    paths:
+
+test:
+  stage: test
+
+  # Test steps
+  script:
+    - 'mvn $MAVEN_CLI_OPTS verify site site:stage'
+
+  # Add Jacoco coverage metric to Gitlab GUI
+  after_script:
+    - awk -F"," '{ branches += $6 + $7; covered += $7 } END { print covered, "/", branches, " branches covered"; print 100*covered/branches, "% branches covered" }' target/site/jacoco/jacoco.csv
+  coverage: '/(\d+.\d+) % +branches covered/'
+
+  artifacts:
+    # Define which files/directories should be kept as artifacts e.g. jars
+    paths:
+
+    reports:
+      # Show differences in unit tests results in Gitlab GUI
+      # https://docs.gitlab.com/ee/ci/junit_test_reports.html
+      # e.g. target/surefire-reports/TEST-*.xml
+      junit:
+
+pages:
+  stage: deploy
+
+  # Deploy steps
+  script:
+    'mvn $MAVEN_CLI_OPTS site site:stage'
+
+  artifacts:
+    # Define which files/directories should be kept as artifacts e.g. jars
+    paths:
+      - target/staging
+
+  # Only store artifacts for master branch
+  only:
+    - master
+  
+# Optional security and license checks
+include:
+  # Static Application Security Testing (SAST)
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/sast/index.html
+  template: SAST.gitlab-ci.yml
+
+  # Dynamic Application Security Testing (DAST)
+  # tests security of web facing applications
+  # Needs DAST_WEBSITE variable e.g. DAST_WEBSITE: https://example.com
+  # https://docs.gitlab.com/ee/user/application_security/dast/index.html
+  #template: DAST.gitlab-ci.yml
+
+  # Dependency Scanning
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/dependency_scanning/index.html
+  template: Dependency-Scanning.gitlab-ci.yml
+
+  # License Management
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/license_management/index.html
+  template: License-Management.gitlab-ci.yml
+

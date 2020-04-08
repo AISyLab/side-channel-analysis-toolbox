@@ -1,0 +1,110 @@
+# Reference: https://docs.gitlab.com/ee/ci/yaml/
+# Examples for different languages can be found in doc/CI. Other examples can be found at: https://gitlab.com/gitlab-org/gitlb-ce/tree/master/lib/gitlb/ci/templates
+
+# Docker image
+image: python:latest
+
+# Variables
+# Allows you to define custom variables
+variables:
+  # Change pip's cache directory to be inside the project directory since we can
+  # only cache local items.
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Cache libraries in between jobs
+# https://docs.gitlab.com/ee/ci/caching/index.html
+cache:
+  paths:
+    # Pip's cache doesn't store the python packages
+    # https://pip.pypa.io/en/stable/reference/pip_install/#caching
+    #
+    # If you want to also cache the installed packages, you have to install
+    # them in a virtualenv and cache it as well.
+    - .cache/pip
+    - venv/
+
+# Displays time before each script
+before_script:
+  - python -V # Print out python version for debugging
+  - pip install virtualenv
+  - virtualenv venv
+  - source venv/bin/activate
+  - date
+
+# Displays time after each script
+after_script:
+  - date
+
+# Stages
+stages:
+  - test
+
+# Jobs
+run:
+  stage: test
+
+  # Run steps
+  script:
+    - python setup.py bdist_wheel
+
+  artifacts:
+    # Define which files/directories should be kept as artifacts e.g. jars
+    paths:
+      - dist/*.whl
+
+test:
+  stage: test
+
+  # Test steps
+  script:
+    - python setup.py test --junitxml=unit_test_report.xml
+    - pip install tox flake8 # you can also use tox
+    - tox -e py36,flake8
+
+  artifacts:
+    # Define which files/directories should be kept as artifacts e.g. jars
+    paths:
+
+    reports:
+      # Show differences in unit tests results in Gitlab GUI
+      # https://docs.gitlab.com/ee/ci/junit_test_reports.html
+      junit: unit_test_report.xml
+
+pages:
+  stage: test
+
+  # Documentation steps
+  script:
+  - pip install sphinx sphinx-rtd-theme
+  - cd doc ; make html
+  - mv build/html/ ../public/
+  artifacts:
+    paths:
+    - public
+  only:
+  - master
+
+  
+# Optional security and license checks
+include:
+  # Static Application Security Testing (SAST)
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/sast/index.html
+  template: SAST.gitlab-ci.yml
+
+  # Dynamic Application Security Testing (DAST)
+  # tests security of web facing applications
+  # Needs DAST_WEBSITE variable e.g. DAST_WEBSITE: https://example.com
+  # https://docs.gitlab.com/ee/user/application_security/dast/index.html
+  #template: DAST.gitlab-ci.yml
+
+  # Dependency Scanning
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/dependency_scanning/index.html
+  template: Dependency-Scanning.gitlab-ci.yml
+
+  # License Management
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/license_management/index.html
+  template: License-Management.gitlab-ci.yml
+

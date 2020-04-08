@@ -1,0 +1,68 @@
+# Reference: https://docs.gitlab.com/ee/ci/yaml/
+# Examples for different languages can be found in doc/CI. Other examples can be found at: https://gitlab.com/gitlab-org/gitlb-ce/tree/master/lib/gitlb/ci/templates
+
+# Docker image
+image: python:3.7.3
+
+# Variables
+# Allows you to define custom variables
+variables:
+  # Change pip's cache directory to be inside the project directory since we can
+  # only cache local items.
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+# Cache libraries in between jobs
+# https://docs.gitlab.com/ee/ci/caching/index.html
+cache:
+  paths:
+    # Pip's cache doesn't store the python packages
+    # https://pip.pypa.io/en/stable/reference/pip_install/#caching
+    #
+    # If you want to also cache the installed packages, you have to install
+    # them in a virtualenv and cache it as well.
+    - .cache/pip
+    - venv/
+
+# Displays time before each script
+before_script:
+  - python -V # Print out python version for debugging
+  - pip install virtualenv
+  - pip install pycodestyle
+  - pip install coverage
+  - date
+
+# Displays time after each script
+after_script:
+  - date
+
+# Stages
+stages:
+  - test
+  - checkstyle
+
+# Jobs
+
+test:
+  stage: test
+
+  # Test steps
+  script:
+    - coverage run --source=sca --omit=sca/tvla/*,sca/cpa/*,sca/util/cpa_functions.py --branch setup.py test
+    - coverage report
+
+  coverage: '/\d{1,2}%/'
+
+checkstyle:
+  # Checkstyle stage to enforce code standards.
+  stage: checkstyle
+
+  script:
+    - pycodestyle sca
+    - pycodestyle --exclude="__init__.py" tests
+  
+# Optional security and license checks
+include:
+  # License Management
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/license_management/index.html
+  template: License-Management.gitlab-ci.yml

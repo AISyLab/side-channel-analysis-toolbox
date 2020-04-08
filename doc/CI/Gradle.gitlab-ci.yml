@@ -1,0 +1,107 @@
+# Reference: https://docs.gitlab.com/ee/ci/yaml/
+# Examples for different languages can be found in doc/CI. Other examples can be found at: https://gitlab.com/gitlab-org/gitlb-ce/tree/master/lib/gitlb/ci/templates
+
+# Docker image
+image: gradle:alpine
+
+# Variables
+# Allows you to define custom variables
+variables:
+  # Disable the Gradle daemon for Continuous Integration servers as correctness
+  # is usually a priority over speed in CI environments. Using a fresh
+  # runtime for each build is more reliable since the runtime is completely
+  # isolated from any previous builds.
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+
+# Cache libraries in between jobs
+# https://docs.gitlab.com/ee/ci/caching/index.html
+cache:
+  paths:
+
+# Displays time before each script
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+  - date
+
+# Displays time after each script
+after_script:
+  - date
+
+# Stages
+stages:
+  - build
+  - test
+
+# Jobs
+build:
+  stage: build
+
+  # Build steps
+  script:
+    - gradle --build-cache assemble
+
+  # Cache libraries in between jobs
+  cache:
+    key: "$CI_COMMIT_REF_NAME"
+    policy: push
+    paths:
+      - build
+      - .gradle
+
+  artifacts:
+    # Define which files/directories should be kept as artifacts e.g. jars
+    paths:
+
+test:
+  stage: test
+
+  # Test steps
+  script:
+    - gradle check
+
+  # Add Jacoco coverage metric to Gitlab GUI
+  after_script:
+    - awk -F"," '{ branches += $6 + $7; covered += $7 } END { print covered, "/", branches, " branches covered"; print 100*covered/branches, "% branches covered" }' target/site/jacoco/jacoco.csv
+  coverage: '/(\d+.\d+) % +branches covered/'
+
+  # Cache libraries in between jobs
+  cache:
+    key: "$CI_COMMIT_REF_NAME"
+    policy: pull
+    paths:
+      - build
+      - .gradle
+
+  artifacts:
+    # Define which files/directories should be kept as artifacts e.g. jars
+    paths:
+
+    reports:
+      # Show differences in unit tests results in Gitlab GUI
+      # https://docs.gitlab.com/ee/ci/junit_test_reports.html
+      # e.g. target/surefire-reports/TEST-*.xml
+      junit:
+  
+# Optional security and license checks
+include:
+  # Static Application Security Testing (SAST)
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/sast/index.html
+  template: SAST.gitlab-ci.yml
+
+  # Dynamic Application Security Testing (DAST)
+  # tests security of web facing applications
+  # Needs DAST_WEBSITE variable e.g. DAST_WEBSITE: https://example.com
+  # https://docs.gitlab.com/ee/user/application_security/dast/index.html
+  #template: DAST.gitlab-ci.yml
+
+  # Dependency Scanning
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/dependency_scanning/index.html
+  template: Dependency-Scanning.gitlab-ci.yml
+
+  # License Management
+  # works with most languages
+  # https://docs.gitlab.com/ee/user/application_security/license_management/index.html
+  template: License-Management.gitlab-ci.yml
+
