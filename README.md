@@ -151,7 +151,7 @@ python sca mia --fs-pearson
 If you use this code, please consider citing:
 
     @misc{SCAT,
-      author = {Wolfgang Bubberman, Sengim Karayalcin, Matthias Meester, Olaf Braakman, and Stjepan Picek},
+      author = {Wolfgang Bubberman and Sengim Karayalcin and Matthias Meester and Olaf Braakman and Stjepan Picek},
       title  = {{Side-channel Analysis Toolbox}},
       note   = {{\url{https://github.com/AISyLab/side-channel-analysis-toolbox}}},
       year   = {2020}
